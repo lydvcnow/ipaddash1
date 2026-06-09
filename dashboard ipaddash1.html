@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>钓鱼气象台</title>
+<style>
+/* ── Reset ── */
+* { margin: 0; padding: 0; -webkit-box-sizing: border-box; box-sizing: border-box; }
+
+body {
+  background: #071520;
+  color: #c8dfe8;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', Arial, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  font-size: 16px;
+}
+
+/* ── Layout ── */
+#app {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  height: 100vh;
+  padding: 10px;
+  gap: 10px;
+}
+
+.col-left {
+  -webkit-flex: 0 0 60%;
+  flex: 0 0 60%;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.col-right {
+  -webkit-flex: 1;
+  flex: 1;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+/* ── Cards ── */
+.card {
+  background: rgba(10, 35, 55, 0.85);
+  border: 1px solid rgba(60, 140, 180, 0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: -webkit-linear-gradient(left, rgba(60,140,180,0.6), rgba(60,140,180,0.1));
+  background: linear-gradient(to right, rgba(60,140,180,0.6), rgba(60,140,180,0.1));
+}
+
+.card-title {
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(100,170,200,0.7);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* ── Location Toggle ── */
+.loc-toggle {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  gap: 0;
+  margin-bottom: 10px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(60,130,170,0.35);
+  width: 100%;
+}
+
+.loc-btn {
+  -webkit-flex: 1;
+  flex: 1;
+  background: rgba(5,20,35,0.6);
+  border: none;
+  color: rgba(130,180,210,0.7);
+  font-size: 14px;
+  padding: 8px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  border-right: 1px solid rgba(60,130,170,0.25);
+}
+
+.loc-btn:last-child { border-right: none; }
+
+.loc-btn.active {
+  background: rgba(40,100,145,0.6);
+  color: #a8d8f0;
+  font-weight: 700;
+}
+
+/* ── Weather Card ── */
+#weather-card {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+}
+
+.wx-main {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+
+.wx-icon { font-size: 48px; line-height: 1; }
+
+.wx-temp-block {}
+.wx-temp {
+  font-size: 46px;
+  font-weight: 300;
+  color: #e8f4fa;
+  line-height: 1;
+  font-family: 'Courier New', Courier, monospace;
+}
+.wx-desc {
+  font-size: 16px;
+  color: rgba(180,210,230,0.8);
+  margin-top: 3px;
+}
+
+.wx-location {
+  font-size: 13px;
+  color: rgba(100,160,190,0.7);
+  margin-left: auto;
+  text-align: right;
+}
+
+.wx-grid {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wx-item {
+  -webkit-flex: 0 0 calc(50% - 3px);
+  flex: 0 0 calc(50% - 3px);
+  background: rgba(5, 25, 40, 0.6);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 12px;
+}
+.wx-item-icon { font-size: 20px; }
+.wx-item-label { font-size: 12px; color: rgba(140,185,210,0.7); }
+.wx-item-val { font-size: 16px; color: #d0e8f4; font-family: 'Courier New', monospace; font-weight: 600; }
+
+/* ── Calendar Card ── */
+#calendar-card {
+  -webkit-flex: 1;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+.cal-header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: baseline;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cal-big-date {
+  font-size: 56px;
+  font-weight: 300;
+  color: #e0f0fa;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.cal-date-info {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cal-weekday { font-size: 18px; color: rgba(160,200,225,0.9); }
+.cal-lunar { font-size: 13px; color: rgba(130,175,205,0.7); }
+.cal-month-year { font-size: 13px; color: rgba(100,155,185,0.6); margin-left: auto; }
+
+/* Mini calendar grid */
+.cal-grid-wrap {
+  -webkit-flex: 1;
+  flex: 1;
+  overflow: hidden;
+}
+
+.cal-nav {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cal-nav-title {
+  -webkit-flex: 1;
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+  color: rgba(160,205,230,0.85);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.cal-nav-btn {
+  background: none;
+  border: none;
+  color: rgba(100,160,195,0.7);
+  font-size: 22px;
+  padding: 2px 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-dow {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.cal-dow span {
+  -webkit-flex: 1;
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(100,155,185,0.6);
+  text-transform: uppercase;
+}
+
+.cal-days {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+}
+
+.cal-day {
+  -webkit-flex: 0 0 14.2857%;
+  flex: 0 0 14.2857%;
+  text-align: center;
+  padding: 2px 1px;
+  position: relative;
+  cursor: default;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.cal-day .dn {
+  display: block;
+  font-size: 15px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 50%;
+  margin: 0 auto;
+  color: rgba(180, 210, 230, 0.85);
+}
+
+.cal-day.today .dn {
+  background: rgba(50,130,175,0.7);
+  color: #fff;
+  font-weight: 700;
+}
+
+.cal-day.other-month .dn { color: rgba(100,140,165,0.35); }
+
+.cal-day.us-holiday .dn { background: rgba(80,50,10,0.5); color: #e8c060; }
+.cal-day.today.us-holiday .dn { background: rgba(120,90,10,0.8); }
+
+.cal-dot {
+  display: block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  margin: 1px auto 0;
+}
+.cal-dot.solar { background: rgba(80,200,140,0.8); }
+.cal-dot.moon  { background: rgba(200,180,100,0.8); }
+.cal-dot.holiday { background: rgba(220,140,60,0.8); }
+
+.cal-day-tag {
+  font-size: 9px;
+  color: rgba(80,195,135,0.9);
+  display: block;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.cal-day-tag.moon-tag { color: rgba(200,175,90,0.9); }
+
+/* ── Fishing Card ── */
+#fish-card {
+  -webkit-flex: 1;
+  flex: 1;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fish-header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.fish-title-block { -webkit-flex: 1; flex: 1; }
+
+.fish-spot {
+  font-size: 18px;
+  color: #d8eef8;
+  font-weight: 600;
+}
+
+.fish-coords {
+  font-size: 11px;
+  color: rgba(100,155,185,0.5);
+  font-family: 'Courier New', monospace;
+}
+
+.fish-score-badge {
+  text-align: center;
+  background: rgba(5,20,35,0.7);
+  border-radius: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(60,140,180,0.2);
+}
+
+.fish-score-num {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.fish-score-stars { font-size: 16px; margin-top: 2px; }
+.fish-score-label { font-size: 11px; color: rgba(120,170,200,0.6); margin-top: 1px; }
+
+.score-good  { color: #5ec880; }
+.score-mid   { color: #e8c060; }
+.score-bad   { color: #e07060; }
+
+/* Marine data row */
+.fish-section-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(80,140,175,0.6);
+  text-transform: uppercase;
+  margin: 10px 0 6px;
+  border-bottom: 1px solid rgba(60,120,160,0.15);
+  padding-bottom: 3px;
+}
+
+.fish-data-row {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(40,80,110,0.2);
+}
+.fish-data-row:last-child { border-bottom: none; }
+
+.fish-data-icon { font-size: 18px; width: 24px; text-align: center; }
+.fish-data-label { font-size: 13px; color: rgba(140,185,210,0.7); -webkit-flex: 1; flex: 1; }
+.fish-data-val { font-size: 16px; color: #cce4f0; font-family: 'Courier New', monospace; font-weight: 600; }
+.fish-data-val.warn { color: #e07060; }
+.fish-data-val.caution { color: #e8c060; }
+.fish-data-val.good { color: #5ec880; }
+
+/* Tides */
+.tide-row {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.tide-pill {
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  background: rgba(5,22,38,0.7);
+  border: 1px solid rgba(60,120,160,0.3);
+  border-radius: 4px;
+  padding: 5px 10px;
+  color: rgba(170,210,230,0.85);
+}
+
+.tide-pill.high {
+  border-color: rgba(80,170,220,0.5);
+  color: #7dc8ea;
+}
+
+/* Windows */
+.fish-window {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 8px;
+  background: rgba(5,20,35,0.5);
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-bottom: 5px;
+  border: 1px solid rgba(50,110,150,0.2);
+}
+
+.fish-window-time {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: rgba(160,205,230,0.9);
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  min-width: 60px;
+}
+
+.fish-window-label {
+  font-size: 13px;
+  color: rgba(140,185,210,0.7);
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+.fish-window-stars { font-size: 14px; }
+
+/* Loading / error states */
+.loading {
+  color: rgba(100,160,195,0.5);
+  font-size: 11px;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.err-msg {
+  color: rgba(220,100,80,0.8);
+  font-size: 10px;
+  padding: 4px 0;
+}
+
+/* Timestamp */
+#timestamp {
+  position: fixed;
+  bottom: 6px;
+  right: 10px;
+  font-size: 9px;
+  color: rgba(70,120,155,0.4);
+  font-family: 'Courier New', monospace;
+}
+
+/* Refresh button */
+#refresh-btn {
+  position: fixed;
+  bottom: 4px;
+  left: 10px;
+  background: rgba(30,70,100,0.5);
+  border: 1px solid rgba(60,130,170,0.3);
+  color: rgba(120,175,210,0.7);
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scroll styling for right col */
+.col-right::-webkit-scrollbar { width: 3px; }
+.col-right::-webkit-scrollbar-track { background: transparent; }
+.col-right::-webkit-scrollbar-thumb { background: rgba(60,120,160,0.3); border-radius: 2px; }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="col-left">
+    <!-- Weather -->
+    <div class="card" id="weather-card">
+      <div class="loc-toggle">
+        <button class="loc-btn active" id="btn-fremont" onclick="switchLoc('fremont')">📍 Fremont</button>
+        <button class="loc-btn" id="btn-sanjose" onclick="switchLoc('sanjose')">📍 San Jose</button>
+      </div>
+      <div id="wx-content"><div class="loading">加载中…</div></div>
+    </div>
+    <!-- Calendar -->
+    <div class="card" id="calendar-card">
+      <div id="cal-content"></div>
+    </div>
+  </div>
+
+  <div class="col-right">
+    <div class="card" id="fish-card">
+      <div class="card-title">🎣 鱼情 · Half Moon Bay</div>
+      <div id="fish-content"><div class="loading">加载中…</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="timestamp"></div>
+<button id="refresh-btn" onclick="initAll()">↻ 刷新</button>
+
+<script>
+// ══════════════════════════════════════════════════
+// DATA CONSTANTS
+// ══════════════════════════════════════════════════
+
+var HMB = { lat: 37.4963, lon: -122.4285, noaa: '9414958' };
+
+var SOLAR_TERMS = {
+  '01-05':'小寒','01-20':'大寒',
+  '02-04':'立春','02-18':'雨水',
+  '03-05':'惊蛰','03-20':'春分',
+  '04-04':'清明','04-20':'谷雨',
+  '05-05':'立夏','05-21':'小满',
+  '06-06':'芒种','06-21':'夏至',
+  '07-07':'小暑','07-22':'大暑',
+  '08-07':'立秋','08-23':'处暑',
+  '09-07':'白露','09-23':'秋分',
+  '10-08':'寒露','10-23':'霜降',
+  '11-07':'立冬','11-22':'小雪',
+  '12-07':'大雪','12-21':'冬至'
+};
+
+var US_HOLIDAYS_2026 = {
+  '01-01':'元旦','01-19':'MLK Day','02-16':'总统日',
+  '05-25':'阵亡将士纪念日','06-19':'奴隶解放日',
+  '07-04':'独立日','09-07':'劳工节',
+  '10-12':'哥伦布日','11-11':'退伍军人节',
+  '11-26':'感恩节','12-25':'圣诞节'
+};
+
+var WMO_CODES = {
+  0:'晴',1:'基本晴',2:'多云',3:'阴',
+  45:'雾',48:'冻雾',
+  51:'毛毛雨',53:'中毛毛雨',55:'强毛毛雨',
+  61:'小雨',63:'中雨',65:'大雨',
+  71:'小雪',73:'中雪',75:'大雪',
+  77:'冰粒',
+  80:'阵雨',81:'中阵雨',82:'强阵雨',
+  85:'阵雪',86:'强阵雪',
+  95:'雷暴',96:'雷暴+冰雹',99:'强雷暴'
+};
+
+var WX_ICONS = {
+  0:'☀️',1:'🌤',2:'⛅',3:'☁️',
+  45:'🌫',48:'🌫',
+  51:'🌦',53:'🌦',55:'🌧',
+  61:'🌧',63:'🌧',65:'🌧',
+  71:'🌨',73:'🌨',75:'❄️',77:'🌨',
+  80:'🌦',81:'🌧',82:'⛈',
+  85:'🌨',86:'❄️',
+  95:'⛈',96:'⛈',99:'⛈'
+};
+
+var WEEK_DAYS = ['日','一','二','三','四','五','六'];
+var MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function dateStr(d) {
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+
+function mmdd(d) {
+  return pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+
+function xhr(url, cb) {
+  var req = new XMLHttpRequest();
+  req.open('GET', url, true);
+  req.timeout = 12000;
+  req.onreadystatechange = function() {
+    if (req.readyState === 4) {
+      if (req.status === 200) {
+        try { cb(null, JSON.parse(req.responseText)); }
+        catch(e) { cb(e, null); }
+      } else {
+        cb(new Error('HTTP ' + req.status), null);
+      }
+    }
+  };
+  req.ontimeout = function() { cb(new Error('timeout'), null); };
+  req.send();
+}
+
+function beaufort(ms) {
+  if (ms < 0.3) return 0;
+  if (ms < 1.6) return 1;
+  if (ms < 3.4) return 2;
+  if (ms < 5.5) return 3;
+  if (ms < 8.0) return 4;
+  if (ms < 10.8) return 5;
+  if (ms < 13.9) return 6;
+  if (ms < 17.2) return 7;
+  return 8;
+}
+
+function windDir(deg) {
+  var dirs = ['北','东北','东','东南','南','西南','西','西北'];
+  return dirs[Math.round(deg/45) % 8];
+}
+
+// ══════════════════════════════════════════════════
+// MOON PHASE
+// ══════════════════════════════════════════════════
+
+function moonPhase(date) {
+  // Known new moon: Jan 29, 2025 (synodic month ~29.53 days)
+  var known = new Date(2025, 0, 29);
+  var diff = (date - known) / (1000 * 60 * 60 * 24);
+  var cycle = 29.53059;
+  var phase = ((diff % cycle) + cycle) % cycle;
+  // Returns {icon, name, age}
+  var icon, name;
+  if (phase < 1.5)      { icon = '🌑'; name = '新月'; }
+  else if (phase < 7.4) { icon = '🌒'; name = '峨眉月'; }
+  else if (phase < 8.9) { icon = '🌓'; name = '上弦月'; }
+  else if (phase < 14.0){ icon = '🌔'; name = '盈凸月'; }
+  else if (phase < 15.5){ icon = '🌕'; name = '满月'; }
+  else if (phase < 21.4){ icon = '🌖'; name = '亏凸月'; }
+  else if (phase < 22.9){ icon = '🌗'; name = '下弦月'; }
+  else if (phase < 28.0){ icon = '🌘'; name = '残月'; }
+  else                  { icon = '🌑'; name = '新月'; }
+  return { icon: icon, name: name, age: Math.round(phase) };
+}
+
+function isFullOrNew(date) {
+  var m = moonPhase(date);
+  return m.name === '满月' || m.name === '新月';
+}
+
+// ══════════════════════════════════════════════════
+// FISHING SCORE
+// ══════════════════════════════════════════════════
+
+function scoreConditions(wind, wave, code) {
+  var score = 80;
+  if (wind > 10)      score -= 35;
+  else if (wind > 7)  score -= 20;
+  else if (wind > 5)  score -= 8;
+
+  if (wave !== null) {
+    if (wave > 2.5)      score -= 30;
+    else if (wave > 1.5) score -= 15;
+    else if (wave > 1.0) score -= 5;
+  }
+
+  var badCodes = [80,81,82,95,96,99,65,63];
+  var mildCodes = [61];
+  var isBad = false, isMild = false;
+  for (var i = 0; i < badCodes.length; i++) { if (code === badCodes[i]) { isBad = true; break; } }
+  for (var j = 0; j < mildCodes.length; j++) { if (code === mildCodes[j]) { isMild = true; break; } }
+  if (isBad)  score -= 20;
+  if (isMild) score -= 8;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function scoreStars(score) {
+  if (score >= 82) return '★★★';
+  if (score >= 65) return '★★☆';
+  return '★☆☆';
+}
+
+function scoreClass(score) {
+  if (score >= 82) return 'score-good';
+  if (score >= 65) return 'score-mid';
+  return 'score-bad';
+}
+
+// Best fishing windows from hourly data
+function calcWindows(hourlyWind, hourlyWave, hourlyCode, tides) {
+  // Build tide transition windows (1hr before/after high tide change = active feed)
+  var tideMap = {};
+  if (tides) {
+    for (var t = 0; t < tides.length; t++) {
+      var td = tides[t];
+      var hStr = td.t.substr(11, 2);
+      var hh = parseInt(hStr, 10);
+      tideMap[hh] = td.type;
+      if (hh > 0) tideMap[hh-1] = td.type + '_pre';
+      if (hh < 23) tideMap[hh+1] = td.type + '_post';
+    }
+  }
+
+  var windows = [];
+  for (var h = 6; h <= 20; h++) {
+    var wind = hourlyWind[h] || 0;
+    var wave = hourlyWave ? (hourlyWave[h] || null) : null;
+    var code = hourlyCode[h] || 0;
+    var score = scoreConditions(wind, wave, code);
+
+    var label = '';
+    if (tideMap[h]) {
+      var tt = tideMap[h];
+      if (tt === 'H' || tt === 'H_pre' || tt === 'H_post') label = '高潮变水';
+      else if (tt === 'L' || tt === 'L_pre' || tt === 'L_post') label = '低潮变水';
+    }
+    if (h >= 17 && h < 20) { score += 8; label = label || '傍晚黄金'; }
+    else if (h >= 13 && h < 17) { score += 4; label = label || '午后'; }
+
+    if (score < 40) continue;
+
+    windows.push({
+      h: h,
+      time: pad2(h) + ':00',
+      score: score,
+      label: label || (h < 12 ? '上午' : '下午'),
+      stars: scoreStars(score)
+    });
+  }
+
+  // Deduplicate nearby hours, keep best
+  windows.sort(function(a,b) { return b.score - a.score; });
+  var kept = [];
+  for (var wi = 0; wi < windows.length; wi++) {
+    var w = windows[wi];
+    var overlap = false;
+    for (var ki = 0; ki < kept.length; ki++) {
+      if (Math.abs(kept[ki].h - w.h) < 2) { overlap = true; break; }
+    }
+    if (!overlap) { kept.push(w); }
+    if (kept.length >= 4) break;
+  }
+  kept.sort(function(a,b) { return a.h - b.h; });
+  return kept;
+}
+
+// ══════════════════════════════════════════════════
+// WEATHER
+// ══════════════════════════════════════════════════
+
+function loadWeather(lat, lon, locationName) {
+  var el = document.getElementById('wx-content');
+  var today = new Date();
+  var ds = dateStr(today);
+
+  var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+    '&longitude=' + lon +
+    '&current=temperature_2m,weathercode,windspeed_10m,winddirection_10m,surface_pressure,relative_humidity_2m' +
+    '&temperature_unit=fahrenheit&windspeed_unit=ms&timezone=America%2FLos_Angeles';
+
+  xhr(url, function(err, data) {
+    if (err || !data || !data.current) {
+      el.innerHTML = '<div class="err-msg">天气加载失败</div>';
+      return;
+    }
+    var c = data.current;
+    var tempF = Math.round(c.temperature_2m);
+    var tempC = Math.round((tempF - 32) * 5/9);
+    var code = c.weather_code || c.weathercode || 0;
+    var wind = c.windspeed_10m || 0;
+    var wdir = c.winddirection_10m || 0;
+    var pres = Math.round(c.surface_pressure || 1013);
+    var hum  = Math.round(c.relative_humidity_2m || 0);
+    var bf   = beaufort(wind);
+    var icon = WX_ICONS[code] || '?';
+    var desc = WMO_CODES[code] || '未知';
+    var wdirStr = windDir(wdir);
+
+    var windClass = wind > 10 ? 'warn' : (wind > 6 ? 'caution' : '');
+
+    el.innerHTML =
+      '<div class="wx-main">' +
+        '<div class="wx-icon">' + icon + '</div>' +
+        '<div class="wx-temp-block">' +
+          '<div class="wx-temp">' + tempF + '°F</div>' +
+          '<div class="wx-desc">' + desc + ' · ' + tempC + '°C</div>' +
+        '</div>' +
+        '<div class="wx-location">' + (locationName || '') + '</div>' +
+      '</div>' +
+      '<div class="wx-grid">' +
+        '<div class="wx-item"><span class="wx-item-icon">💨</span>' +
+          '<div><div class="wx-item-label">风速</div>' +
+          '<div class="wx-item-val ' + windClass + '">' + wind.toFixed(1) + 'm/s</div></div>' +
+        '</div>' +
+        '<div class="wx-item"><span class="wx-item-icon">&#x2192;</span>' +
+          '<div><div class="wx-item-label">风向</div>' +
+          '<div class="wx-item-val">' + wdirStr + ' ' + wdir + '°</div></div>' +
+        '</div>' +
+        '<div class="wx-item"><span class="wx-item-icon" style="font-size:18px;">hPa</span>' +
+          '<div><div class="wx-item-label">气压</div>' +
+          '<div class="wx-item-val">' + pres + ' hPa</div></div>' +
+        '</div>' +
+        '<div class="wx-item"><span class="wx-item-icon">💧</span>' +
+          '<div><div class="wx-item-label">湿度</div>' +
+          '<div class="wx-item-val">' + hum + '%</div></div>' +
+        '</div>' +
+      '</div>';
+  });
+}
+
+// ══════════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════════
+
+var calViewYear, calViewMonth;
+
+function renderCalendar(viewYear, viewMonth) {
+  calViewYear = viewYear;
+  calViewMonth = viewMonth;
+
+  var today = new Date();
+  var moon = moonPhase(today);
+
+  // Header: big date
+  var wd = WEEK_DAYS[today.getDay()];
+  var lunarNote = moon.icon + ' ' + moon.name + '(第' + moon.age + '天)';
+  var solar = SOLAR_TERMS[mmdd(today)];
+  if (solar) lunarNote += ' · 【' + solar + '】';
+
+  var header =
+    '<div class="cal-header">' +
+      '<div class="cal-big-date">' + today.getDate() + '</div>' +
+      '<div class="cal-date-info">' +
+        '<div class="cal-weekday">周' + wd + '</div>' +
+        '<div class="cal-lunar">' + lunarNote + '</div>' +
+      '</div>' +
+      '<div class="cal-month-year">' + MONTHS_EN[today.getMonth()] + ' ' + today.getFullYear() + '</div>' +
+    '</div>';
+
+  // Mini calendar
+  var firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  var daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+  var monthName = MONTHS_EN[viewMonth] + ' ' + viewYear;
+  var nav =
+    '<div class="cal-nav">' +
+      '<button class="cal-nav-btn" onclick="navCal(-1)">‹</button>' +
+      '<div class="cal-nav-title">' + monthName + '</div>' +
+      '<button class="cal-nav-btn" onclick="navCal(1)">›</button>' +
+    '</div>';
+
+  var dow = '<div class="cal-dow">';
+  var dowLabels = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  for (var i = 0; i < 7; i++) {
+    dow += '<span>' + dowLabels[i] + '</span>';
+  }
+  dow += '</div>';
+
+  var days = '<div class="cal-days">';
+
+  // Prev month fill
+  for (var p = firstDay - 1; p >= 0; p--) {
+    days += '<div class="cal-day other-month"><span class="dn">' + (daysInPrev - p) + '</span></div>';
+  }
+
+  // Current month days
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dayDate = new Date(viewYear, viewMonth, d);
+    var isToday = (viewYear === today.getFullYear() && viewMonth === today.getMonth() && d === today.getDate());
+    var key = pad2(viewMonth+1) + '-' + pad2(d);
+    var sterm = SOLAR_TERMS[key];
+    var ushol = US_HOLIDAYS_2026[key];
+    var mp = moonPhase(dayDate);
+    var isFullNew = (mp.name === '满月' || mp.name === '新月');
+
+    var cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (ushol) cls += ' us-holiday';
+
+    var dots = '';
+    if (sterm) dots += '<span class="cal-dot solar"></span>';
+    if (isFullNew) dots += '<span class="cal-dot moon"></span>';
+    if (ushol) dots += '<span class="cal-dot holiday"></span>';
+
+    var tag = '';
+    if (sterm) tag = '<span class="cal-day-tag">' + sterm + '</span>';
+    else if (isFullNew && !sterm) tag = '<span class="cal-day-tag moon-tag">' + (mp.name === '满月' ? '满月' : '新月') + '</span>';
+    else if (ushol) tag = '<span class="cal-day-tag" style="color:rgba(220,160,60,0.85)">' + ushol.substr(0,2) + '</span>';
+
+    days += '<div class="' + cls + '">' +
+      '<span class="dn">' + d + '</span>' +
+      dots +
+      tag +
+    '</div>';
+  }
+
+  // Next month fill
+  var total = firstDay + daysInMonth;
+  var remaining = (7 - (total % 7)) % 7;
+  for (var n = 1; n <= remaining; n++) {
+    days += '<div class="cal-day other-month"><span class="dn">' + n + '</span></div>';
+  }
+  days += '</div>';
+
+  var el = document.getElementById('cal-content');
+  el.innerHTML = header +
+    '<div class="cal-grid-wrap">' + nav + dow + days + '</div>';
+}
+
+function navCal(delta) {
+  calViewMonth += delta;
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  if (calViewMonth < 0)  { calViewMonth = 11; calViewYear--; }
+  renderCalendar(calViewYear, calViewMonth);
+}
+
+// ══════════════════════════════════════════════════
+// FISHING
+// ══════════════════════════════════════════════════
+
+function loadFishing() {
+  var el = document.getElementById('fish-content');
+  var today = new Date();
+  var ds = dateStr(today);
+
+  // We'll load marine + tides + wind in parallel using a counter
+  var results = { marine: null, tides: null, wind: null, done: 0 };
+
+  function onAllDone() {
+    renderFishing(results.marine, results.tides, results.wind, today);
+  }
+
+  // Marine data from Open-Meteo
+  var marineUrl = 'https://marine-api.open-meteo.com/v1/marine?latitude=' + HMB.lat +
+    '&longitude=' + HMB.lon +
+    '&hourly=wave_height,swell_wave_height,swell_wave_period&timezone=America%2FLos_Angeles&start_date=' + ds + '&end_date=' + ds;
+
+  xhr(marineUrl, function(err, data) {
+    if (!err && data && data.hourly) {
+      results.marine = data.hourly;
+    }
+    results.done++;
+    if (results.done === 3) onAllDone();
+  });
+
+  // HMB wind from Open-Meteo forecast
+  var windUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + HMB.lat +
+    '&longitude=' + HMB.lon +
+    '&current=windspeed_10m,winddirection_10m&hourly=windspeed_10m&windspeed_unit=ms' +
+    '&timezone=America%2FLos_Angeles&start_date=' + ds + '&end_date=' + ds;
+
+  xhr(windUrl, function(err, data) {
+    if (!err && data && data.current) {
+      results.wind = data.current;
+    }
+    results.done++;
+    if (results.done === 3) onAllDone();
+  });
+
+  // NOAA Tides
+  var noaaUrl = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter' +
+    '?begin_date=' + ds.replace(/-/g,'') +
+    '&range=24&station=' + HMB.noaa +
+    '&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=metric&application=fishing_app&format=json';
+
+  xhr(noaaUrl, function(err, data) {
+    if (!err && data && data.predictions) {
+      results.tides = data.predictions;
+    }
+    results.done++;
+    if (results.done === 3) onAllDone();
+  });
+}
+
+function renderFishing(marine, tides, wind, today) {
+  var el = document.getElementById('fish-content');
+
+  // Extract noon values for score
+  var waveArr = marine ? marine.wave_height : null;
+  var swellArr = marine ? marine.swell_wave_height : null;
+  var periodArr = marine ? marine.swell_wave_period : null;
+
+  var noonWave = waveArr ? waveArr[12] : null;
+  var noonSwell = swellArr ? swellArr[12] : null;
+  var noonPeriod = periodArr ? periodArr[12] : null;
+
+  // Wind
+  var windSpeed = wind ? (wind.windspeed_10m || 0) : 0;
+  var windDeg   = wind ? (wind.winddirection_10m || 0) : 0;
+  var windDirStr = windDir(windDeg);
+
+  // Score now includes real wind
+  var score = scoreConditions(windSpeed, noonWave, 0);
+  var stars = scoreStars(score);
+  var sc = scoreClass(score);
+
+  // Moon
+  var moon = moonPhase(today);
+  var moonBonus = (moon.name === '满月' || moon.name === '新月') ? '🌕 满/新月加成' : '';
+
+  // Build hourly wave index for windows
+  var hourlyWave = {};
+  if (waveArr) {
+    for (var i = 0; i < waveArr.length && i < 24; i++) {
+      hourlyWave[i] = waveArr[i];
+    }
+  }
+  var hourlyWind = {}; // we don't have HMB-specific wind here, use 0 as placeholder
+  var windows = calcWindows(hourlyWind, hourlyWave, {}, tides);
+
+  // Wave class
+  var waveClass = '';
+  if (noonWave !== null) {
+    if (noonWave > 2.5) waveClass = 'warn';
+    else if (noonWave > 1.5) waveClass = 'caution';
+    else waveClass = 'good';
+  }
+
+  // Tide pills HTML
+  var tidePills = '<div class="loading">无数据</div>';
+  if (tides && tides.length > 0) {
+    tidePills = '<div class="tide-row">';
+    for (var t = 0; t < tides.length; t++) {
+      var td = tides[t];
+      var arrow = td.type === 'H' ? '▲' : '▽';
+      var label = td.type === 'H' ? '高' : '低';
+      var timeStr = td.t.substr(11, 5);
+      var ht = parseFloat(td.v).toFixed(1);
+      var pillCls = td.type === 'H' ? 'tide-pill high' : 'tide-pill';
+      tidePills += '<span class="' + pillCls + '">' + arrow + label + ' ' + timeStr + ' ' + ht + 'm</span>';
+    }
+    tidePills += '</div>';
+  }
+
+  // Windows HTML
+  var windowsHTML = '';
+  if (windows.length > 0) {
+    for (var wi = 0; wi < windows.length; wi++) {
+      var w = windows[wi];
+      windowsHTML += '<div class="fish-window">' +
+        '<span class="fish-window-time">' + w.time + '</span>' +
+        '<span class="fish-window-label">' + w.label + '</span>' +
+        '<span class="fish-window-stars">' + w.stars + '</span>' +
+      '</div>';
+    }
+  } else {
+    windowsHTML = '<div class="loading">今日条件一般，无突出窗口</div>';
+  }
+
+  var html =
+    '<div class="fish-header">' +
+      '<div class="fish-title-block">' +
+        '<div class="fish-spot">Jetty · HMB</div>' +
+        '<div class="fish-coords">37.4963°N 122.4285°W</div>' +
+      '</div>' +
+      '<div class="fish-score-badge">' +
+        '<div class="fish-score-num ' + sc + '">' + score + '</div>' +
+        '<div class="fish-score-stars">' + stars + '</div>' +
+        '<div class="fish-score-label">综合评分</div>' +
+      '</div>' +
+    '</div>';
+
+  if (moonBonus) {
+    html += '<div style="font-size:10px;color:rgba(200,175,90,0.85);margin-bottom:6px;">' + moonBonus + '</div>';
+  }
+
+  html += '<div class="fish-section-label">海况</div>';
+
+  // Wind + wave on same compact row to save space
+  var windClass = windSpeed > 10 ? 'warn' : (windSpeed > 7 ? 'caution' : (windSpeed > 5 ? '' : 'good'));
+  html += '<div class="fish-data-row">' +
+    '<span class="fish-data-icon">💨</span>' +
+    '<span class="fish-data-label">风速 · ' + windDirStr + '</span>' +
+    '<span class="fish-data-val ' + windClass + '">' + windSpeed.toFixed(1) + ' m/s</span>' +
+  '</div>';
+
+  if (noonWave !== null) {
+    html += '<div class="fish-data-row">' +
+      '<span class="fish-data-icon">🌊</span>' +
+      '<span class="fish-data-label">浪高（noon）</span>' +
+      '<span class="fish-data-val ' + waveClass + '">' + noonWave.toFixed(1) + ' m</span>' +
+    '</div>';
+  }
+
+  if (noonSwell !== null) {
+    var swClass = noonSwell > 2.0 ? 'warn' : (noonSwell > 1.2 ? 'caution' : '');
+    html += '<div class="fish-data-row">' +
+      '<span class="fish-data-icon">〰</span>' +
+      '<span class="fish-data-label">涌浪高度</span>' +
+      '<span class="fish-data-val ' + swClass + '">' + noonSwell.toFixed(1) + ' m</span>' +
+    '</div>';
+  }
+
+  if (noonPeriod !== null) {
+    html += '<div class="fish-data-row">' +
+      '<span class="fish-data-icon">⏱</span>' +
+      '<span class="fish-data-label">涌浪周期</span>' +
+      '<span class="fish-data-val">' + Math.round(noonPeriod) + ' s</span>' +
+    '</div>';
+  }
+
+  html += '<div class="fish-data-row">' +
+    '<span class="fish-data-icon">' + moon.icon + '</span>' +
+    '<span class="fish-data-label">月相</span>' +
+    '<span class="fish-data-val">' + moon.name + ' (第' + moon.age + '天)</span>' +
+  '</div>';
+
+  html += '<div class="fish-section-label">潮汐 · NOAA</div>';
+  html += tidePills;
+
+  html += '<div class="fish-section-label">推荐时段</div>';
+  html += windowsHTML;
+
+  // Solar term note
+  var st = SOLAR_TERMS[mmdd(today)];
+  if (st) {
+    html += '<div style="margin-top:8px;font-size:10px;color:rgba(80,195,135,0.8);">📅 今日节气：' + st + '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════
+// GEOLOCATION + INIT
+// ══════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// LOCATION SWITCHER (no GPS)
+// ══════════════════════════════════════════════════
+
+var LOCATIONS = {
+  fremont:  { lat: 37.5485, lon: -121.9886, name: 'Fremont' },
+  sanjose:  { lat: 37.3382, lon: -121.8863, name: 'San Jose' }
+};
+
+var currentLoc = 'fremont';
+
+function switchLoc(key) {
+  currentLoc = key;
+  var btns = ['fremont','sanjose'];
+  for (var i = 0; i < btns.length; i++) {
+    var el = document.getElementById('btn-' + btns[i]);
+    if (el) el.className = 'loc-btn' + (btns[i] === key ? ' active' : '');
+  }
+  var loc = LOCATIONS[key];
+  loadWeather(loc.lat, loc.lon, loc.name);
+}
+
+function initWeather() {
+  var loc = LOCATIONS[currentLoc];
+  loadWeather(loc.lat, loc.lon, loc.name);
+}
+
+function initAll() {
+  var today = new Date();
+  calViewYear  = today.getFullYear();
+  calViewMonth = today.getMonth();
+
+  renderCalendar(calViewYear, calViewMonth);
+  initWeather();
+  loadFishing();
+
+  var ts = document.getElementById('timestamp');
+  var h = today.getHours(), m = today.getMinutes();
+  ts.textContent = '更新 ' + pad2(h) + ':' + pad2(m);
+}
+
+// Start
+initAll();
+</script>
+</body>
+</html>
